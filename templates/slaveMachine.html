@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-cn">
+<script>
+    window.onload = function () {
+        window.messageTimeC = -1;
+        window.tempTimeC = -1;
+        setInterval(alive,500);
+        sendDate("refresh", "", "刷新信息成功");
+    };
+    function alive() {
+        let xmlhttp;
+        if (window.XMLHttpRequest) {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // IE6, IE5 浏览器执行代码
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4)
+                if (xmlhttp.status !== 200) {
+                    let message = window.message;
+                    message.innerText = "网络故障 2S后尝试再次连接";
+                    message.style.color = "red";
+                    if (window.messageTimeC !== -1)
+                        clearTimeout(window.messageTimeC);
+                    window.messageTimeC = setTimeout(function () {
+                        message.innerText = "";
+                        window.messageTimeC = -1;
+                    }, 1000);
+                }else {
+                    let data = JSON.parse(xmlhttp.responseText);
+                    let message = document.getElementById("message");
+                    let nowTem = document.getElementById("nowTem");
+                    let targetTem = document.getElementById("targetTem");
+                    let workMode = document.getElementById("workMode");
+                    let blowingState = document.getElementById("blowingState");
+                    let currentBlowing = document.getElementById("currentBlowing");
+                    let energy = document.getElementById("energy");
+                    let cost = document.getElementById("cost");
+                    let power = document.getElementById("power");
+
+					nowTem.innerText = data.nowTemp;
+					if(window.tempTimeC == -1)
+                    targetTem.innerText = data.targetTemp;
+                    workMode.innerText = data.mode;
+                    blowingState.innerText = data.isB;
+                    currentBlowing.innerText = data.Bspeed;
+                    energy.innerText = data.energy;
+                    cost.innerText = data.cost;
+                    if (data.isWork === false)
+                        power.innerText = "打开空调";
+                    else
+                        power.innerText = "关闭空调";
+                }
+        };
+        xmlhttp.open("POST", "slaveApi", true);
+        xmlhttp.setRequestHeader("alive","");
+        xmlhttp.setRequestHeader("roomid", {{ roomid }});
+        xmlhttp.send();
+    }
+    function sendDate(head, value, messageText) {
+        let xmlhttp;
+        if (window.XMLHttpRequest) {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // IE6, IE5 浏览器执行代码
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4)
+                if (xmlhttp.status === 200) {
+                    let data = JSON.parse(xmlhttp.responseText);
+                    let message = document.getElementById("message");
+                    let nowTem = document.getElementById("nowTem");
+                    let targetTem = document.getElementById("targetTem");
+                    let workMode = document.getElementById("workMode");
+                    let blowingState = document.getElementById("blowingState");
+                    let currentBlowing = document.getElementById("currentBlowing");
+                    let energy = document.getElementById("energy");
+                    let cost = document.getElementById("cost");
+                    let power = document.getElementById("power");
+
+                    nowTem.innerText = data.nowTemp;
+                    targetTem.innerText = data.targetTemp;
+                    workMode.innerText = data.mode;
+                    blowingState.innerText = data.isB;
+                    currentBlowing.innerText = data.Bspeed;
+                    energy.innerText = data.energy;
+                    cost.innerText = data.cost;
+                    if (data.isWork === false)
+                        power.innerText = "打开空调";
+                    else
+                        power.innerText = "关闭空调";
+
+                    message.innerText = messageText;
+                    message.style.color = "green";
+                    if (window.messageTimeC !== -1)
+                        clearTimeout(window.messageTimeC);
+                    window.messageTimeC = setTimeout(function () {
+                        message.innerText = "";
+                        window.messageTimeC = -1;
+                    }, 2000);
+                } else {
+                    let message = window.message;
+                    message.innerText = "请求失败";
+                    message.style.color = "red";
+                    if (window.messageTimeC !== -1)
+                        clearTimeout(window.messageTimeC);
+                    window.messageTimeC = setTimeout(function () {
+                        message.innerText = "";
+                        window.messageTimeC = -1;
+                    }, 2000);
+                }
+        };
+        xmlhttp.open("POST", "slaveApi", true);
+        xmlhttp.setRequestHeader("roomid", {{ roomid }});
+        xmlhttp.setRequestHeader(head, value);
+        xmlhttp.send();
+    }
+
+    function changeTem(ope) {
+        let targetTem = document.getElementById("targetTem");
+        let intTem = parseInt(targetTem.innerText);
+        let workMode = document.getElementById("workMode");
+        let max = 0;
+        let min = 0;
+        if (workMode.innerText === "cool") {
+            min = 18;
+            max = 25;
+        } else {
+            min = 25;
+            max = 30;
+        }
+        if (ope === 1) {
+            if (intTem < max)
+                targetTem.innerText = String(intTem + 1);
+        } else {
+            if (intTem > min)
+                targetTem.innerText = String(intTem - 1);
+        }
+
+        if (window.tempTimeC !== -1)
+            clearTimeout(window.tempTimeC);
+        window.tempTimeC = setTimeout(function () {
+            sendDate("temp", targetTem.innerText, "成功改变温度");
+            window.tempTimeC = -1;
+        }, 1000);
+    }
+
+    function powerF() {
+        let power = document.getElementById("power");
+        if (power.innerText === "打开空调")
+            sendDate("power", "on", "成功打开空调");
+        else
+            sendDate("power", "off", "成功关闭空调");
+    }
+
+    function Blow(target) {
+        sendDate("blowing", target, "改变风速成功");
+    }
+
+    function refresh() {
+        sendDate("refresh", "", "刷新信息成功");
+    }
+</script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>空调遥控器</title>
+    <style>
+        .btns {
+            text-align: center;
+        }
+
+        .btn {
+            width: 90px;
+            height: 50px;
+            color: #2ecc71;
+            #margin-top: 30px;
+            margin: 10px;
+            border: 1px solid #2ecc71;
+            background-color: #fff;
+            font-size: 18px;
+            outline: none;
+            -webkit-border-radius: 4px;
+            -moz-border-radius: 4px;
+            border-radius: 4px;
+        }
+
+        .message {
+            height: 300px;
+            width: 200px;
+            margin: 50px auto auto;
+            text-align: left;
+            font-size: 17px
+        }
+    </style>
+</head>
+<body>
+<div class="message">
+    当前温度&nbsp;<a id="nowTem">25</a>&nbsp;&nbsp;目标温度&nbsp;<a id="targetTem">30</a><br><br>
+    工作模式：<a id="workMode"></a><br><br>
+    送风状态：<a id="blowingState"></a><br><br>
+    当前风速：<a id="currentBlowing"></a><br><br>
+    消耗能量：<a id="energy"></a><br><br>
+    累计费用：<a id="cost"></a><br><br>
+    <a id="message"></a><br><br>
+</div>
+<div class="btns">
+    <button class="btn" id="power" onclick="powerF()" style="width: 200px">打开空调</button>
+    <br>
+    <button class="btn" type="button" onclick="changeTem(1)">升高温度</button>
+    <button class="btn" onclick="Blow(3)" style="color: #2ecc71;">高速风</button>
+    <br>
+    <button class="btn" onclick="refresh()" style="color: #2ecc71;">刷新状态</button>
+    <button class="btn" onclick="Blow(2)" style="color: #2ecc71;">中速风</button>
+    <br>
+    <button class="btn" onclick="changeTem(0)">降低温度</button>
+    <button class="btn" onclick="Blow(1)" style="color: #2ecc71;">低速风</button>
+</div>
+<img src="" alt="" id="test" style="display: none">
+</body>
+</html>
+

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>
+    window.onload = function () {
+        window.intC = setInterval(refreshTable, 1000);
+        window.tempTimeC = -1;
+        window.messageTimeC = -1;
+        sendDate("refre", "", "连接成功");
+    };
+
+    function sendDate(head, value, messageText) {
+        let xmlhttp;
+        if (window.XMLHttpRequest) {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // IE6, IE5 浏览器执行代码
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4)
+                if (xmlhttp.status === 200) {
+                    let data = JSON.parse(xmlhttp.responseText);
+                    let message = document.getElementById("message");
+                    let targetTem = document.getElementById("targetTemp");
+                    let workMode = document.getElementById("workMode");
+                    let state = document.getElementById("state");
+
+                    targetTem.innerText = data.targetTemp;
+                    workMode.innerText = data.mode;
+                    state.innerText = data.stat;
+                    if (data.isWork === false)
+                        power.innerText = "打开空调";
+                    else
+                        power.innerText = "关闭空调";
+
+                    message.innerText = messageText;
+                    message.style.color = "green";
+                    if (window.messageTimeC !== -1)
+                        clearTimeout(window.messageTimeC);
+                    window.messageTimeC = setTimeout(function () {
+                        message.innerText = "";
+                        window.messageTimeC = -1;
+                    }, 2000);
+                } else {
+                    let message = window.message;
+                    message.innerText = "请求失败";
+                    message.style.color = "red";
+                    if (window.messageTimeC !== -1)
+                        clearTimeout(window.messageTimeC);
+                    window.messageTimeC = setTimeout(function () {
+                        message.innerText = "";
+                        window.messageTimeC = -1;
+                    }, 2000);
+                }
+        };
+        xmlhttp.open("POST", "masterApi", true);
+        xmlhttp.setRequestHeader(head, value);
+        xmlhttp.send();
+    }
+
+    function changeFreshF() {
+        clearInterval(window.intC);
+        let freFM = document.getElementById("FreFM");
+        newF = parseInt(freFM.value);
+        if (newF > 0 && newF < 11) {
+            ms = 1000 * newF;
+            clearInterval(window.intC);
+            window.intC = setInterval(refreshTable, ms);
+            let fre = document.getElementById("freshF");
+            fre.innerText = newF;
+            message.innerText = "更新刷新率成功";
+            if (window.messageTimeC !== -1)
+                clearTimeout(window.messageTimeC);
+            window.messageTimeC = setTimeout(function () {
+                message.innerText = "";
+                window.messageTimeC = -1;
+            }, 2000);
+        } else {
+            let message = window.message;
+            message.innerText = "刷新率范围应在1-10";
+            message.style.color = "red";
+            if (window.messageTimeC !== -1)
+                clearTimeout(window.messageTimeC);
+            window.messageTimeC = setTimeout(function () {
+                message.innerText = "";
+                window.messageTimeC = -1;
+            }, 2000);
+        }
+    }
+
+    function changeTem(ope) {
+        let targetTem = document.getElementById("targetTemp");
+        let intTem = parseInt(targetTem.innerText);
+        let workMode = document.getElementById("workMode");
+        let max = 0;
+        let min = 0;
+        if (workMode.innerText === "cool") {
+            min = 18;
+            max = 25;
+        } else {
+            min = 25;
+            max = 30;
+        }
+        if (ope === 1) {
+            if (intTem < max)
+                targetTem.innerText = String(intTem + 1);
+        } else {
+            if (intTem > min)
+                targetTem.innerText = String(intTem - 1);
+        }
+
+        if (window.tempTimeC !== -1)
+            clearTimeout(window.tempTimeC);
+        window.tempTimeC = setTimeout(function () {
+            sendDate("temp", targetTem.innerText, "成功改变温度");
+            window.tempTimeC = -1;
+        }, 1000);
+    }
+
+    function powerF() {
+        let power = document.getElementById("power");
+        if (power.innerText === "打开空调")
+            sendDate("power", "on", "成功打开空调");
+        else
+            sendDate("power", "off", "成功关闭空调");
+    }
+
+    function changeMod(pos) {
+        if (pos === 1)
+            sendDate("mode", "warm", "成功改变工作状态");
+        else
+            sendDate("mode", "cool", "成功改变工作状态");
+    }
+
+    function refreshTable() {
+        let xmlhttp;
+        if (window.XMLHttpRequest) {
+            //  IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // IE6, IE5 浏览器执行代码
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4)
+                if (xmlhttp.status === 200) {
+                    let data = JSON.parse(xmlhttp.responseText);
+                    let table = document.getElementById("table");
+                    if (table.rows.length < data.length +1)
+                        appTable(table,data.length+1-table.rows.length);
+                    for(let i=0;i<data.length;i++)
+                        for (let k=0;k<6;k++)
+                            table.rows[i+1].cells[k].innerText = data[i][k];
+                } else {
+                    let message = window.message;
+                    message.innerText = "请求失败";
+                    message.style.color = "red";
+                    if (window.messageTimeC !== -1)
+                        clearTimeout(window.messageTimeC);
+                    window.messageTimeC = setTimeout(function () {
+                        message.innerText = "";
+                        window.messageTimeC = -1;
+                    }, 2000);
+                }
+        };
+        xmlhttp.open("POST", "allSlaves", true);
+        xmlhttp.send();
+    }
+
+    function appTable(td,n) {
+        for(let k=0;k<n;k++)
+        {
+            let tr = document.createElement("tr");
+            for (let i = 0; i < 6; i++)
+                tr.appendChild(document.createElement("td"));
+            td.appendChild(tr);
+        }
+    }
+</script>
+<head>
+    <meta charset="UTF-8">
+    <title>主控机</title>
+    <style>
+        .btns {
+            text-align: center;
+        }
+
+        .btn {
+            width: 90px;
+            height: 50px;
+            color: #2ecc71;
+            #margin-top: 30px;
+            margin: 10px;
+            border: 1px solid #2ecc71;
+            background-color: #fff;
+            font-size: 18px;
+            outline: none;
+            -webkit-border-radius: 4px;
+            -moz-border-radius: 4px;
+            border-radius: 4px;
+        }
+
+        .table {
+            font-size: 17px;
+            border-color: #2ecc71;
+            width: 700px;
+            margin-left: 10%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+<div style="display: flex;margin-left: 10% ;margin-top: 30px">
+    <div class="btns">
+        <button class="btn" id="power" onclick="powerF()" style="width: 200px">打开空调</button>
+        <br>
+        <button class="btn" type="button" onclick="changeTem(1)">升高温度</button>
+        <button class="btn" onclick="changeMod(0)" style="color: #2ecc71;">制冷模式</button>
+        <input type="number" class="btn" id="FreFM" style="width: 110px;text-align: center"/>
+        <br>
+        <button class="btn" onclick="changeTem(0)" style="color: #2ecc71;">降低温度</button>
+        <button class="btn" onclick="changeMod(1)">制热模式</button>
+        <button class="btn" onclick="changeFreshF()" style="width: 110px">设定刷新率</button>
+    </div>
+    <div style="width: 300px;margin-left: 30px;margin-top: 10px">
+        工作模式&nbsp;&nbsp;&nbsp; <a id="workMode"></a><br><br>
+        当前状态&nbsp;&nbsp;&nbsp; <a id="state"></a><br><br>
+        刷新频率&nbsp;&nbsp;&nbsp; <a id="freshF">1</a><br><br>
+        目标温度&nbsp;&nbsp;&nbsp; <a id="targetTemp"></a><br><br>
+        <a id=message></a>
+    </div>
+</div>
+<a href="list" style="margin-left: 10%">日报表</a>
+<table id="table" class="table" border="1" cellspacing="0px">
+    <tr>
+        <th>房间号</th>
+        <th>连接状态</th>
+        <th>开关状态</th>
+        <th>当前温度</th>
+        <th>送风状态</th>
+        <th>当前风速</th>
+    </tr>
+</table>
+</body>
+</html>
